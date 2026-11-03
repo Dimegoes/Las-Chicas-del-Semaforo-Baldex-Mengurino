@@ -2,10 +2,9 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
-from contador_hibrido import HybridCounter
 from app.config import OUTPUT,SAMPLES_DB,hybrid_requested
 from app.controllers import analysis,health,results,samples
-from app.services.engines import EngineService
+from app.services.engines import EngineService,default_hybrid_factory
 from app.services.results import ResultStore
 from app.services.samples import SampleRepository
 from app.web import ApiGateway,SPAStaticFiles
@@ -13,7 +12,7 @@ from app.web import ApiGateway,SPAStaticFiles
 TAGS=[{'name':'Estado'},{'name':'Analisis'},{'name':'Resultados'},
       {'name':'Muestras (en desarrollo)','description':'Trazabilidad, diluciones y UFC. Aun no validado ni usado por la PWA.'}]
 
-def create_app(output=OUTPUT,samples_db=SAMPLES_DB,hybrid_factory=HybridCounter,use_hybrid=None,web_dir=None,access_key=None):
+def create_app(output=OUTPUT,samples_db=SAMPLES_DB,hybrid_factory=default_hybrid_factory,use_hybrid=None,web_dir=None,access_key=None):
     """web_dir sirve la PWA compilada en el mismo puerto; access_key exige una clave en cada ruta de la API."""
     engines=EngineService(hybrid_factory,hybrid_requested() if use_hybrid is None else use_hybrid)
 

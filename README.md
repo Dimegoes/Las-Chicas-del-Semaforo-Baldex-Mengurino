@@ -13,12 +13,33 @@ El modelo neuronal ya está integrado. No se entrenó una nueva red en este proy
 Doble clic en **`INICIAR.cmd`** (raíz del repositorio). No hace falta tener Python ni Node instalados:
 
 1. La primera vez descarga [uv](https://github.com/astral-sh/uv) y un Python 3.12 portable en `runtime/`, e instala el motor clásico (~1 minuto).
-2. Si hay GPU NVIDIA, ofrece instalar el motor IA (~5 GB). Si ya existe `procesamiento/.venv-neural`, lo usa directamente.
+2. Ofrece instalar el motor IA para CPU o GPU NVIDIA (varios GB; requiere Git instalado). Si ya está instalado, lo usa directamente. La API selecciona CPU cuando PyTorch no dispone de CUDA.
 3. Inicia un solo servidor con la app y la API, abre el navegador y muestra en la consola el link y un QR para celulares conectados al mismo wifi.
 
 Para usar e instalar la app desde celulares fuera de la red local, doble clic en **`COMPARTIR.cmd`**: además abre un link HTTPS público temporal con [Cloudflare Tunnel](https://github.com/cloudflare/cloudflared) (se descarga a `runtime/` la primera vez; el link cambia en cada inicio). La PC debe quedar encendida mientras se use.
 
-Cada link incluye una clave de acceso (`?clave=...`) guardada en `runtime/clave.txt`; sin ella la API responde 401. Para invalidar los links ya compartidos: `INICIAR.cmd --nueva-clave`. Otras opciones: `--instalar-ia`, `--puerto N`, `--sin-navegador`. Todo lo descargado vive en `runtime/` (ignorado por Git); borrar esa carpeta deja el repositorio como recién clonado.
+Cada link incluye una clave de acceso (`?clave=...`) guardada en `runtime/clave.txt`; sin ella la API responde 401. Para invalidar los links ya compartidos: `INICIAR.cmd --nueva-clave`. Otras opciones: `--instalar-ia`, `--puerto N`, `--sin-navegador`. Python portable vive en `runtime/`; el entorno neuronal, los repositorios auxiliares y los pesos viven en `procesamiento/.venv-neural`, `vendor` y `modelos`. Estas carpetas están ignoradas por Git.
+
+## IA en una laptop sin GPU dedicada
+
+1. Descargar y extraer el repositorio actualizado en una carpeta local de Windows x64.
+2. Tener conexión a internet para la primera instalación e instalar [Git para Windows](https://git-scm.com/download/win). Volver a abrir el iniciador después de instalar Git. No hace falta instalar Python ni CUDA.
+3. Hacer doble clic en **`INICIAR_IA_CPU.cmd`**. La primera vez prepara PyTorch CPU, los modelos y el servidor; las siguientes reutiliza la instalación.
+4. Esperar a que aparezca **motor IA (CPU)** y se abra la aplicación. Subir una foto y esperar el resultado. Si aparece motor clásico, revisar el error de la consola o `neural_error` en `/api/health`.
+
+El mismo modelo se ejecuta en el procesador, con lotes de una máscara para reducir el consumo de memoria. No se vuelve a entrenar. El procesamiento puede tardar varios minutos según el procesador, la memoria y la cantidad de colonias; el rendimiento en las laptops de la universidad debe medirse. Preparar la instalación con internet antes de la presentación. Copiar un entorno virtual de otra PC no reemplaza la instalación.
+
+Verificación local: 30 pruebas automatizadas aprobadas y una imagen AGAR (`13895.jpg`, 2048 × 2048) procesada con `device=cpu`, lote 1: 12,046 s de carga y 31,279 s de análisis. Se reutilizaron pesos y dependencias existentes (PyTorch 2.11.0+cu128 ejecutando en CPU); se comprobó la resolución de los paquetes CPU con `pip --dry-run`. Falta medir el rendimiento y completar la instalación desde cero en la laptop de destino.
+
+Opciones desde PowerShell, en la raíz del proyecto:
+
+```powershell
+.\INICIAR_IA_CPU.cmd
+.\INICIAR.cmd --instalar-ia --device cpu  # instalar o reparar
+.\INICIAR.cmd --device auto              # CUDA disponible o CPU
+```
+
+Para iniciar directamente con uvicorn, definir `$env:IA_DEVICE="cpu"` antes del comando. `IA_DEVICE=auto` es el valor predeterminado de la API. El motor clásico sigue disponible si la IA no carga.
 
 ## Instalación manual
 
@@ -38,7 +59,9 @@ py -3.12 instalar.py --motor clasico
 Instalar el híbrido y descargar los pesos oficiales:
 
 ```powershell
-py -3.12 instalar.py --motor hibrido
+py -3.12 instalar.py --motor hibrido --device auto
+# Para forzar la instalación sin CUDA:
+py -3.12 instalar.py --motor hibrido --device cpu
 ```
 
 La instalación híbrida descarga varios GB. Crea `.venv-neural`, clona versiones fijadas de los repositorios de los modelos, descarga sus pesos y verifica los hashes registrados. Usa la implementación PyTorch de atención deformable para evitar compilar extensiones CUDA en Windows. SAM2 se instala sin su extensión opcional de limpieza de máscaras. No modifica el entorno clásico `.venv`.

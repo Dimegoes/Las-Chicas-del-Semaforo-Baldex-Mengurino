@@ -1,6 +1,6 @@
 """Instala el motor clásico o híbrido en un entorno local separado (Python 3.12)."""
 from pathlib import Path
-import argparse,hashlib,json,os,subprocess,sys
+import argparse,hashlib,json,os,shutil,subprocess,sys
 ROOT=Path(__file__).resolve().parent
 URLS={
     'GroundingDINO':'https://github.com/IDEA-Research/GroundingDINO.git',
@@ -13,14 +13,24 @@ def run(*args,**kwargs):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--motor',choices=['clasico','hibrido'],default='clasico')
+    parser.add_argument('--device',choices=['auto','cpu','cuda'],default='auto')
     args=parser.parse_args()
     if sys.version_info[:2]!=(3,12):
         parser.error('Usar Python 3.12, versión con la que se verificaron las dependencias fijadas.')
     neural=args.motor=='hibrido'
+    if neural and not shutil.which('git'):
+        parser.error('Instala Git para Windows y vuelve a abrir el iniciador para descargar los modelos.')
+    device=args.device
+    if device=='auto':
+        exe=shutil.which('nvidia-smi')
+        device='cuda' if exe and subprocess.run([exe,'-L'],capture_output=True).returncode==0 else 'cpu'
     env=ROOT/('.venv-neural' if neural else '.venv')
     python=env/('Scripts/python.exe' if os.name=='nt' else 'bin/python')
     if not python.exists():run(sys.executable,'-m','venv',env)
     requirements=ROOT/('requirements-neural.txt' if neural else 'requirements.txt')
+    if neural and device=='cpu':requirements=ROOT/'requirements-neural-cpu.txt'
+    ready=env/'instalacion-completa.json'
+    ready.unlink(missing_ok=True)
     run(python,'-m','pip','install','-r',requirements)
     if neural:
         commits=json.loads((ROOT/'referencias/repositorios.json').read_text(encoding='utf-8'))
@@ -44,5 +54,6 @@ def main():
                 digest=hashlib.file_digest(handle,'sha256').hexdigest()
             if digest!=record['sha256']:raise RuntimeError('Hash inesperado: '+record['file'])
     run(python,'-m','pip','check')
+    ready.write_text(json.dumps({'device':device if neural else None}),encoding='utf-8')
     print('Instalación completada. Consultar README.md para procesar una foto o iniciar la API.')
 if __name__=='__main__':main()

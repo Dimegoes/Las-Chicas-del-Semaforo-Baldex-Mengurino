@@ -36,30 +36,26 @@ def ensure_server_deps():
     subprocess.run([*cmd,'-r',str(req),*EXTRA],check=True)
     stamp.write_text(want)
 
-def has_nvidia_gpu():
-    exe=shutil.which('nvidia-smi')
-    return bool(exe) and subprocess.run([exe,'-L'],capture_output=True).returncode==0
-
 def neural_python():
     py=venv_python(PROC/'.venv-neural')
     return py if py.is_file() and (PROC/'modelos/manifest.json').is_file() else None
 
-def maybe_install_neural(force):
-    """Ofrece el motor IA una sola vez si hay GPU NVIDIA; la respuesta 'no' se recuerda."""
-    if neural_python():return
+def maybe_install_neural(force,device="auto"):
+    """Ofrece el motor IA para CPU o GPU; la respuesta 'no' se recuerda."""
+    if neural_python() and not force:return
     prefs_file=RT/'preferencias.json'
     prefs=json.loads(prefs_file.read_text(encoding='utf-8')) if prefs_file.is_file() else {}
     if not force:
-        if prefs.get('instalar_ia')=='no' or not has_nvidia_gpu():return
-        say('\nSe detecto una GPU NVIDIA. El motor IA cuenta con mucha mas precision que el clasico,')
-        say('pero descarga ~5 GB y tarda varios minutos. Se puede instalar despues con: INICIAR.cmd --instalar-ia')
+        if prefs.get('instalar_ia')=='no':return
+        say('\nPuedes instalar el motor IA con GPU NVIDIA o CPU (sin grafica dedicada).')
+        say('Descarga varios GB y tarda varios minutos. Se puede instalar despues con: INICIAR.cmd --instalar-ia')
         try:answer=input('Instalar el motor IA ahora? [s/N]: ').strip().lower()
         except EOFError:answer=''
         if answer not in ('s','si','sí','y','yes'):
             prefs['instalar_ia']='no';prefs_file.write_text(json.dumps(prefs),encoding='utf-8')
             return
     say('Instalando el motor IA...')
-    subprocess.run([sys.executable,str(PROC/'instalar.py'),'--motor','hibrido'],cwd=PROC,check=True)
+    subprocess.run([sys.executable,str(PROC/'instalar.py'),'--motor','hibrido','--device',device],cwd=PROC,check=True)
 
 def access_key(renew):
     path=RT/'clave.txt'
@@ -123,7 +119,8 @@ def show_qr(url):
 def main():
     parser=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('modo',nargs='?',choices=['local','compartir'],default='local')
-    parser.add_argument('--instalar-ia',action='store_true',help='instalar el motor IA (~5 GB, requiere GPU NVIDIA)')
+    parser.add_argument('--instalar-ia',action='store_true',help='instalar o reparar el motor IA (varios GB, CPU o NVIDIA)')
+    parser.add_argument('--device',choices=['auto','cpu','cuda'],default='auto',help='dispositivo del motor IA')
     parser.add_argument('--puerto',type=int,default=8000)
     parser.add_argument('--nueva-clave',action='store_true',help='invalida los links compartidos antes')
     parser.add_argument('--sin-navegador',action='store_true')
@@ -131,7 +128,7 @@ def main():
     RT.mkdir(exist_ok=True)
 
     ensure_server_deps()
-    maybe_install_neural(args.instalar_ia)
+    maybe_install_neural(args.instalar_ia,args.device)
     if not (PROC/'web/index.html').is_file():
         raise SystemExit('Falta la PWA compilada en procesamiento/web. Ejecuta "npm run build" dentro de pwa/.')
 
@@ -142,13 +139,15 @@ def main():
     if port!=args.puerto:say(f'El puerto {args.puerto} esta ocupado; se usa el {port}.')
 
     env=dict(os.environ,CLAVE_ACCESO=key,PYTHONUTF8='1')
+    env['IA_DEVICE']=args.device
     if not neural:env['MOTOR']='clasico'
-    say('\nIniciando el servidor'+(' y cargando el modelo IA (~15 s)...' if neural else '...'))
+    if neural and args.device=='cpu':say('IA en CPU: el analisis puede tardar varios minutos; espera a que termine.')
+    say('\nIniciando el servidor'+(' y cargando el modelo IA (puede tardar varios minutos)...' if neural else '...'))
     server=subprocess.Popen([str(python),'-X','utf8','-m','uvicorn','api:app','--host','0.0.0.0','--port',str(port),
                              '--log-level','warning'],cwd=PROC,env=env)
     tunnel=None
     try:
-        health=wait_ready(port,key,server)
+        health=wait_ready(port,key,server,timeout=900)
         local=f'http://localhost:{port}/?clave={key}'
         ip=lan_ip();lan=f'http://{ip}:{port}/?clave={key}' if ip else None
         public=None

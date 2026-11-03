@@ -1,12 +1,20 @@
 """Motores de conteo. El hibrido es opcional: si no carga, la API sigue con el clasico."""
-import asyncio
+import asyncio,os
 from contador import count_colonies,write_result,save_image
-from contador_hibrido import HybridCounter,write_hybrid_result
+from contador_hibrido import HybridCounter,NeuralConfig,write_hybrid_result
+
+def default_hybrid_factory():
+    import torch
+    device=os.environ.get('IA_DEVICE','auto').lower()
+    if device not in ('auto','cpu','cuda'):
+        raise ValueError('IA_DEVICE debe ser auto, cpu o cuda')
+    if device=='auto':device='cuda' if torch.cuda.is_available() else 'cpu'
+    return HybridCounter(NeuralConfig(device=device,batch_size=1 if device=='cpu' else 8))
 
 class EngineUnavailable(Exception):pass
 
 class EngineService:
-    def __init__(self,hybrid_factory=HybridCounter,use_hybrid=True):
+    def __init__(self,hybrid_factory=default_hybrid_factory,use_hybrid=True):
         self.hybrid_factory=hybrid_factory;self.use_hybrid=use_hybrid
         self.model=None;self.error=None if use_hybrid else 'Desactivado con MOTOR=clasico'
         self.lock=None
