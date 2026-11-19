@@ -1,7 +1,7 @@
 from fastapi import APIRouter,Depends,HTTPException
 from fastapi.responses import FileResponse
 from app.dependencies import get_results
-from app.schemas.results import Review
+from app.schemas.results import PlateUfc,Review
 from app.services.results import ResultNotFound,ResultStore
 router=APIRouter(prefix='/results',tags=['Resultados'])
 
@@ -15,3 +15,9 @@ def review(analysis_id:str,data:Review,results:ResultStore=Depends(get_results))
     try:return results.save_review(analysis_id,data)
     except ResultNotFound:raise HTTPException(404,'No encontrado') from None
     except ValueError as exc:raise HTTPException(400,str(exc)) from exc
+
+@router.post('/{analysis_id}/ufc')
+def ufc(analysis_id:str,data:PlateUfc,results:ResultStore=Depends(get_results)):
+    """Calcula UFC/mL o UFC/g de esta placa con su conteo guardado y lo agrega al historial."""
+    try:return results.save_ufc(analysis_id,data)
+    except ResultNotFound:raise HTTPException(404,'No encontrado') from None

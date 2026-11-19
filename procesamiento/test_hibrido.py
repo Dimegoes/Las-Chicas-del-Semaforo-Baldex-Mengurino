@@ -1,5 +1,5 @@
 """Pruebas de geometria y contrato API; no sustituyen la evaluacion neuronal."""
-import asyncio,io,tempfile,unittest
+import asyncio,io,json,tempfile,unittest
 from pathlib import Path
 import numpy as np
 from PIL import Image
@@ -51,5 +51,10 @@ class HybridTests(unittest.TestCase):
                 self.assertEqual(original,(Path(tmp)/ident/'foto_resultado.json').read_bytes())
                 bad=client.post(f'/results/{ident}/review',json={'centers':[{'x':200,'y':64}]})
                 self.assertEqual(bad.status_code,400)
+                # Flujo completo: la fecha queda en el resultado y el UFC usa el conteo revisado.
+                self.assertIn('analyzed_at',json.loads(original))
+                ufc=client.post(f'/results/{ident}/ufc',json={'exponent':2,'volume_ml':.1}).json()
+                self.assertEqual((ufc['count'],ufc['count_source']),(1,'revisado'))
+                self.assertEqual(client.get('/history').json()[0]['ufc']['count'],1)
                 self.assertEqual(client.get('/results/'+'a'*32+'/contador.py').status_code,404)
 if __name__=='__main__':unittest.main(verbosity=2)

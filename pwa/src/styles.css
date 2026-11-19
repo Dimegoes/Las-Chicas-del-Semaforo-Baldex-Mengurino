@@ -20,7 +20,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.45; -webkit-tap-highlight-color: transparent; }
-button, input { font: inherit; color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
@@ -139,3 +139,41 @@ button { cursor: pointer; }
 .dot-key.dot-manual { border-color: #2a8fd8; background: rgba(77, 179, 255, .3); }
 
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+/* Inicio: acceso al historial */
+.splash-link { display: inline-flex; align-items: center; gap: 6px; color: #fff; opacity: .9; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Calculo de UFC (debajo del conteo) */
+.input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+textarea.input { resize: vertical; min-height: 64px; }
+select.input { appearance: auto; }
+.ufc-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.ufc-head { display: flex; align-items: center; gap: 12px; }
+.ufc-head h3 { margin: 0; font-size: 18px; color: var(--green-800); }
+.ufc-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: var(--gold-100); color: var(--green-800); flex: none; }
+.ufc-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; color: var(--muted); }
+.chips button[aria-pressed="true"] { border-color: var(--green-800); color: var(--green-800); background: var(--green-100); font-weight: 600; }
+.ufc-more { border-top: 1px solid var(--line); padding-top: 10px; }
+.ufc-more summary { cursor: pointer; font-weight: 600; color: var(--green-700); font-size: 14px; }
+.ufc-more[open] summary { margin-bottom: 10px; }
+.ufc-more > .field { margin-top: 12px; }
+.ufc-result { background: var(--gold-100); border: 1px solid #ecdcae; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.ufc-value { margin: 0; color: var(--green-800); }
+.ufc-value strong { font-size: 30px; font-variant-numeric: tabular-nums; }
+.ufc-value span { font-weight: 600; }
+.ufc-formula { margin: 0; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 13.5px; background: #fff; border-radius: 8px; padding: 6px 8px; overflow-wrap: anywhere; }
+.ok-note.small { font-size: 13px; padding: 6px 10px; }
+
+/* Historial */
+.history-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.history-head .btn { flex: none; }
+.history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.history-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px; color: inherit; text-decoration: none; }
+.history-row img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; background: #1c2421; }
+.history-main { display: flex; flex-direction: column; min-width: 0; }
+.history-main strong { color: var(--green-800); font-size: 16px; }
+.history-main .unit { font-size: 13px; font-weight: 600; }
+.history-main .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

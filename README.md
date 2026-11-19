@@ -63,10 +63,15 @@ Endpoints:
 - `GET /results/{analysis_id}/foto_conteo.jpg`: imagen anotada.
 - `GET /results/{analysis_id}/foto_resultado.json`: resultado automático.
 - `POST /results/{analysis_id}/review`: correcciones manuales.
+- `POST /ufc`: calcula UFC/mL o UFC/g a partir de diluciones y conteos, sin guardar (vista previa de la PWA).
+- `POST /results/{analysis_id}/ufc`: calcula UFC con el conteo guardado de esa placa (el revisado si existe) y lo guarda en `ufc.json`, junto a la foto, y en `resultados/api/historial.jsonl`, que conserva cada cálculo sin sobrescribir los anteriores.
+- `GET /history` y `GET /history/csv`: análisis guardados, del más reciente al más antiguo, con su revisión y su UFC; el CSV se abre en Excel.
 
 La PWA utiliza el prefijo `/api`. Si se configura clave, se envía como `X-Clave` o con el enlace completo generado. `/docs` permite explorar la API.
 
-Los endpoints `/samples` y `/ufc` están en desarrollo y aún no los usa la PWA. La API mantiene el modelo en memoria y serializa los análisis.
+Fórmula: UFC/mL (o /g) = promedio de colonias de las placas × 10^n ÷ volumen sembrado (mL), para la dilución 10^-n. Si el promedio queda fuera del rango contable (30–300 por defecto, editable) el resultado se marca como estimación; con 0 colonias se informa el límite de detección. El valor se informa con dos cifras significativas.
+
+Los endpoints `/samples` (muestras con varias diluciones) siguen en desarrollo y la PWA no los usa. La API mantiene el modelo en memoria y serializa los análisis.
 
 ## Resultados preliminares
 

@@ -5,7 +5,7 @@ from starlette.exceptions import HTTPException
 from starlette.staticfiles import StaticFiles
 
 # Rutas de la API (sin el prefijo /api). Todo lo demas son archivos de la PWA.
-API_PREFIXES=('/health','/analyze','/results','/samples','/ufc','/docs','/redoc','/openapi.json')
+API_PREFIXES=('/health','/analyze','/results','/history','/samples','/ufc','/docs','/redoc','/openapi.json')
 
 class SPAStaticFiles(StaticFiles):
     """Archivos de la PWA; una ruta desconocida (/resultado/abc) devuelve index.html para que la resuelva React."""

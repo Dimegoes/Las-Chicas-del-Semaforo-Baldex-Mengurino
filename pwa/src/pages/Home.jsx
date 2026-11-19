@@ -36,6 +36,7 @@ export default function Home() {
         <h1>Conteo de Unidades Formadoras de Colonias (UFC)</h1>
         <p className="splash-sub">Tecnología al servicio de la microbiología</p>
         <Link className="btn btn-gold btn-wide" to="/analizar">Comenzar <Icon name="chevron" size={20} /></Link>
+        <Link className="splash-link" to="/historial"><Icon name="list" size={18} /> Historial de análisis y UFC</Link>
         <EngineStatus />
       </section>
 

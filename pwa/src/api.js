@@ -1,4 +1,4 @@
-// Cliente de la API local. La PWA solo usa los endpoints validados: health, analyze, results y review.
+// Cliente de la API local. La PWA usa: health, analyze, results, review, el calculo de UFC y el historial.
 const BASE = '/api'
 const OFFLINE = 'No hay conexión con el servidor. Inícialo con INICIAR.cmd y vuelve a intentar.'
 const KEY_STORE = 'ufc-clave'
@@ -37,6 +37,9 @@ async function req(path, opts = {}) {
   return res.json()
 }
 
+const postJson = (path, body) => req(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+const keyQuery = key ? `?clave=${encodeURIComponent(key)}` : ''
+
 export const api = {
   health: () => req('/health'),
   analyze: (file, engine = 'auto') => {
@@ -46,9 +49,13 @@ export const api = {
   },
   result: (id) => req(`/results/${id}/foto_resultado.json`),
   savedReview: (id) => req(`/results/${id}/revision.json`).catch(() => null),
-  review: (id, centers, note = '') => req(`/results/${id}/review`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ centers, note }),
-  }),
-  // <img> no puede enviar encabezados: la clave va en la URL de la imagen.
-  fileUrl: (id, name) => `${BASE}/results/${id}/${name}${key ? `?clave=${encodeURIComponent(key)}` : ''}`,
+  review: (id, centers, note = '') => postJson(`/results/${id}/review`, { centers, note }),
+  // Calculo sin guardar (vista previa) y calculo guardado junto a la foto y en el historial.
+  ufcPreview: (body) => postJson('/ufc', body),
+  saveUfc: (id, body) => postJson(`/results/${id}/ufc`, body),
+  savedUfc: (id) => req(`/results/${id}/ufc.json`).catch(() => null),
+  history: () => req('/history'),
+  // <img> y los enlaces de descarga no pueden enviar encabezados: la clave va en la URL.
+  fileUrl: (id, name) => `${BASE}/results/${id}/${name}${keyQuery}`,
+  historyCsvUrl: () => `${BASE}/history/csv${keyQuery}`,
 }

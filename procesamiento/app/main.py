@@ -3,14 +3,16 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
 from app.config import OUTPUT,SAMPLES_DB
-from app.controllers import analysis,health,results,samples
+from app.controllers import analysis,health,history,results,samples,ufc
 from app.services.engines import EngineService,default_hybrid_factory
 from app.services.results import ResultStore
 from app.services.samples import SampleRepository
 from app.web import ApiGateway,SPAStaticFiles
 
 TAGS=[{'name':'Estado'},{'name':'Analisis'},{'name':'Resultados'},
-      {'name':'Muestras (en desarrollo)','description':'Trazabilidad, diluciones y UFC. Aun no validado ni usado por la PWA.'}]
+      {'name':'Historial','description':'Analisis guardados con su revision y su calculo de UFC; exportable a CSV.'},
+      {'name':'Calculo de UFC','description':'UFC/mL o UFC/g a partir de diluciones y conteos, sin guardar.'},
+      {'name':'Muestras (en desarrollo)','description':'Muestras con varias diluciones. Aun no validado ni usado por la PWA.'}]
 
 def create_app(output=OUTPUT,samples_db=SAMPLES_DB,hybrid_factory=default_hybrid_factory,use_hybrid=None,web_dir=None,access_key=None):
     """web_dir sirve la PWA compilada en el mismo puerto; access_key exige una clave en cada ruta de la API."""
@@ -26,7 +28,7 @@ def create_app(output=OUTPUT,samples_db=SAMPLES_DB,hybrid_factory=default_hybrid
     app.state.engines=engines
     app.state.results=ResultStore(output)
     app.state.samples=SampleRepository(samples_db)
-    for controller in (health,analysis,results,samples):app.include_router(controller.router)
+    for controller in (health,analysis,results,history,ufc,samples):app.include_router(controller.router)
     app.add_middleware(ApiGateway,key=access_key)
     if web_dir and (Path(web_dir)/'index.html').is_file():
         # Mounted last: API routes and /docs match first, everything else is the PWA.

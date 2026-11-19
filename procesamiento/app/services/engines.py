@@ -1,5 +1,6 @@
 """Servicio de conteo con IA y estado de disponibilidad del modelo."""
 import asyncio,os
+from datetime import datetime
 from imagen import save_image
 from contador_hibrido import HybridCounter,NeuralConfig,write_hybrid_result
 
@@ -46,6 +47,8 @@ class EngineService:
         async with self.lock:
             fn=self.model.count
             result,debug=await asyncio.to_thread(fn,bgr)
+            # La fecha va dentro del JSON: la fecha del archivo cambia si se copia o restaura la carpeta de resultados.
+            result['analyzed_at']=datetime.now().isoformat(timespec='seconds')
             writer=write_hybrid_result
             await asyncio.to_thread(writer,result,debug,folder,'foto')
             await asyncio.to_thread(save_image,folder/'foto_original.jpg',bgr)

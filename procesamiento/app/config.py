@@ -6,7 +6,8 @@ OUTPUT=ROOT/'resultados/api'
 SAMPLES_DB=ROOT/'resultados/muestras.db'
 MAX_BYTES=20*1024*1024
 MAX_PIXELS=60_000_000
-RESULT_FILES=('foto_conteo.jpg','foto_original.jpg','foto_resultado.json','foto_segments.png','foto_instances.png','foto_roi.png','revision.json')
+RESULT_FILES=('foto_conteo.jpg','foto_original.jpg','foto_resultado.json','foto_segments.png','foto_instances.png','foto_roi.png',
+              'revision.json','ufc.json','miniatura.jpg')
 WEB_DIR=ROOT/'web'  # PWA compilada (npm run build en pwa/)
 
 def access_key():

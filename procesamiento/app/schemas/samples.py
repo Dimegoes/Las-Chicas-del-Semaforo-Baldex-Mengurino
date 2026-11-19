@@ -1,4 +1,4 @@
-"""En desarrollo: trazabilidad de muestras y diluciones para el calculo de UFC. La PWA aun no lo usa."""
+"""Diluciones y conteos para el calculo de UFC (la PWA lo usa en /ufc) y muestras completas (en desarrollo, sin uso en la PWA)."""
 from datetime import datetime
 from typing import Literal
 from pydantic import BaseModel,Field,model_validator

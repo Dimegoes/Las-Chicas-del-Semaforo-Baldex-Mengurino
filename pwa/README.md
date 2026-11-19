@@ -1,6 +1,6 @@
 # PWA de conteo de UFC (primera versión)
 
-Interfaz React con el flujo básico: **inicio → foto de la placa → resultado con corrección manual**. Solo usa los endpoints validados de la API (`/health`, `/analyze`, `/results/{id}/…` y `/results/{id}/review`).
+Interfaz React con el flujo: **inicio → foto de la placa → resultado con corrección manual → cálculo de UFC → historial**. Usa `/health`, `/analyze`, `/results/{id}/…`, `/results/{id}/review`, `/ufc`, `/results/{id}/ufc` y `/history`.
 
 Para **usar** la app no hace falta Node: `INICIAR.cmd` (raíz del repositorio) sirve la versión compilada de `procesamiento/web/`. Esta carpeta es solo para **modificar** la interfaz.
 
@@ -35,8 +35,10 @@ npm test
 
 ## Pantallas
 
-1. **Inicio:** escudo UNALM, estado del motor y últimos análisis de este dispositivo (guardados en el navegador; la API no tiene listado).
+1. **Inicio:** escudo UNALM, estado del motor, acceso al historial y últimos análisis de este dispositivo.
 2. **Registro fotográfico:** capturar o elegir de galería, vista previa y análisis con IA.
 3. **Resultado del análisis:** conteo, colonias cerca del borde, corrección tocando la imagen (quitar o añadir) y **Guardar revisión**. La revisión se guarda aparte en `revision.json`; la predicción original no cambia.
+4. **Cálculo de UFC** (debajo del conteo): dilución de la placa, volumen sembrado, UFC/mL o UFC/g, placa duplicada opcional, rango contable y datos de la muestra (código, tipo, responsable, observaciones). Muestra el resultado con la fórmula y sus números mientras se escribe. **Guardar en el historial** guarda primero la revisión si hay cambios y luego el cálculo en `ufc.json`, junto a la foto.
+5. **Historial:** todos los análisis del servidor con miniatura, fecha, conteo y UFC; botón **CSV** para descargarlo.
 
-Trazabilidad, diluciones, UFC y reporte PDF quedan para una siguiente versión. La API ya expone `/samples` y `/ufc` como endpoints en desarrollo, y las pantallas que los usaban están en el commit `14a6ace` de la rama `mvp-pwa`.
+Muestras con varias diluciones agrupadas y el reporte PDF quedan para una siguiente versión (`/samples` sigue en desarrollo).
