@@ -2,9 +2,9 @@
 from pathlib import Path
 import csv,json,hashlib,statistics,time
 from PIL import Image,ImageOps,ImageDraw,ImageFont
-from contador import read_image
+from imagen import read_image
 from contador_hibrido import HybridCounter,write_hybrid_result
-from evaluar import match_centers,summarize
+from metricas import match_centers,summarize
 ROOT=Path(__file__).resolve().parent
 
 def main():
@@ -24,9 +24,8 @@ def main():
             reference=ann['colonies_number']
             assert reference>=0 and len(ann['labels'])==reference
             matched=match_centers(result['detections'],ann['labels'])
-            base=json.loads((ROOT/f'resultados/{group}_v0_2_final/{path.stem}_resultado.json').read_text(encoding='utf-8'))
-            row={'image':relative,'group':group,'reference':reference,'classic':base['count'],'predicted':result['count'],
-                 'absolute_error':abs(result['count']-reference),'classic_error':abs(base['count']-reference),
+            row={'image':relative,'group':group,'reference':reference,'predicted':result['count'],
+                 'absolute_error':abs(result['count']-reference),
                  'matched_centers':matched,'extra':result['count']-matched,'missed':reference-matched,
                  'seconds':result['processing_seconds'],'peak_gpu_mb':result['peak_gpu_allocated_mb']}
             rows.append(row)
@@ -36,9 +35,8 @@ def main():
                 writer=csv.DictWriter(f,fieldnames=row.keys());writer.writeheader();writer.writerows(rows)
     summary={'evaluation_status':'known_AGAR_images_possible_overlap_with_neural_training_not_independent_validation',
              'overall':summarize(rows),'groups':{g:summarize([r for r in rows if r['group']==g]) for g in ['evaluation','development']},
-             'classic_mae':statistics.mean(r['classic_error'] for r in rows),'model_load_seconds':model.load_seconds,
+             'model_load_seconds':model.load_seconds,
              'hardware':model.hardware,'max_gpu_mb':max(r['peak_gpu_mb'] for r in rows),
-             'improved':sum(r['absolute_error']<r['classic_error'] for r in rows),'worsened':sum(r['absolute_error']>r['classic_error'] for r in rows),
              'detector_sha256':detector_hash,
              'sources':json.loads((ROOT/'vendor/manifest.json').read_text())}
     (output/'resumen.json').write_text(json.dumps(summary,indent=2,ensure_ascii=False),encoding='utf-8')

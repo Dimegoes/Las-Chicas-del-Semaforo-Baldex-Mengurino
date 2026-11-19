@@ -35,12 +35,9 @@
       "localization_note": "Correspondencia uno a uno: centro predicho dentro de caja AGAR. No equivale a mAP/IoU."
     }
   },
-  "classic_mae": 9.447368421052632,
   "model_load_seconds": 13.254,
   "hardware": "NVIDIA GeForce RTX 5060",
   "max_gpu_mb": 2538.9,
-  "improved": 31,
-  "worsened": 2,
   "detector_sha256": "4f67908026070b48889bc093631b63ffb7ab658d6884910662d9303729c2a3d0",
   "sources": {
     "GroundingDINO": "856dde20aee659246248e20734ef9ba5214f5e44",

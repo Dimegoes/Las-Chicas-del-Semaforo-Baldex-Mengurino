@@ -12,7 +12,6 @@ export default function Analyze() {
   const health = useHealth()
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState('')
-  const [engine, setEngine] = useState('auto')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const camRef = useRef(null)
@@ -34,7 +33,7 @@ export default function Analyze() {
   async function analyze() {
     setBusy(true); setError('')
     try {
-      const r = await api.analyze(file, engine)
+      const r = await api.analyze(file, 'hybrid')
       saveRecent({ id: r.analysis_id, count: r.count, engine: r.engine, at: new Date().toISOString() })
       navigate(`/resultado/${r.analysis_id}`)
     } catch (err) {
@@ -74,21 +73,13 @@ export default function Analyze() {
         </div>
       )}
 
-      {hybrid && (
-        <div className="field">
-          <span className="label">Motor de conteo</span>
-          <div className="seg">
-            <button type="button" aria-pressed={engine !== 'classic'} onClick={() => setEngine('auto')}>IA (más preciso)</button>
-            <button type="button" aria-pressed={engine === 'classic'} onClick={() => setEngine('classic')}>Clásico</button>
-          </div>
-        </div>
-      )}
+      {online && !hybrid && <p className="alert" role="alert">El modelo IA no está disponible. Revisa el servidor antes de analizar.</p>}
 
       {health.status === 'offline' && <p className="alert">El servidor está apagado. Inícialo con INICIAR.cmd.</p>}
       {health.status === 'denied' && <p className="alert">Falta la clave de acceso. Abre el link completo (o el QR) que muestra INICIAR.cmd.</p>}
       {error && <p className="alert" role="alert">{error}</p>}
 
-      <button type="button" className="btn btn-primary btn-wide" disabled={!file || busy || !online} onClick={analyze}>
+      <button type="button" className="btn btn-primary btn-wide" disabled={!file || busy || !online || !hybrid} onClick={analyze}>
         {busy ? 'Analizando…' : 'Analizar placa'} <Icon name="chevron" size={20} />
       </button>
       <p className="muted small">La primera foto con IA tarda unos segundos más mientras el modelo se calienta.</p>

@@ -5,5 +5,5 @@ router=APIRouter(tags=['Estado'])
 
 @router.get('/health')
 def health(engines:EngineService=Depends(get_engines)):
-    return {'ready':True,'engines':engines.engines,'default_engine':engines.engines[0],
+    return {'ready':bool(engines.model),'engines':engines.engines,'default_engine':engines.engines[0] if engines.engines else None,
             'neural_model':'ColonyGroundedSAM2','device':engines.device,'neural_error':engines.error}

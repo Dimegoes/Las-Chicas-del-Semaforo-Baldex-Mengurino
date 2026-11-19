@@ -1,194 +1,109 @@
-# Las Chicas del Semáforo — MVP de conteo de colonias
+# Las Chicas del Semáforo — Conteo de colonias con IA
 
-Aplicación experimental para un proyecto de Agronomía. Incluye dos motores de conteo y una API local para conectar una futura PWA:
+MVP para Agronomía: una PWA permite subir fotografías de placas, contar colonias con IA y revisar las detecciones. OpenCV delimita la placa, Grounding DINO con pesos ColonyGroundedSAM2 detecta colonias y SAM2 obtiene sus máscaras. No se entrenó una nueva red en este proyecto.
 
-- **Clásico:** OpenCV, contraste LAB, delimitación de placa y separación watershed.
-- **Híbrido:** OpenCV delimita la placa; Grounding DINO con pesos ColonyGroundedSAM2 detecta colonias; SAM2 obtiene sus máscaras; se filtran duplicados y regiones fuera de la placa.
-- **API:** subida de fotos, consulta de resultados y registro de correcciones humanas separado de la predicción original.
+## Inicio en Windows
 
-El modelo neuronal ya está integrado. No se entrenó una nueva red en este proyecto. La PWA está en `pwa/` y su versión compilada en `procesamiento/web/`.
+1. Extraer el repositorio completo en una carpeta local.
+2. Abrir `INICIAR.cmd`. Descarga Python 3.12 portable y prepara el motor IA si aún no está instalado. No necesita Python, Git ni Node instalados.
+3. Esperar a que cargue el modelo y se abra la aplicación. La primera instalación descarga varios GB y requiere internet.
 
-## Inicio rápido (todo en uno, Windows)
+Para una laptop sin GPU dedicada, abrir **`INICIAR_IA_CPU.cmd`**. La API elige CPU cuando PyTorch no dispone de CUDA. En CPU se segmenta una caja por lote para reducir memoria. El análisis puede tardar varios minutos según el equipo y la foto.
 
-Doble clic en **`INICIAR.cmd`** (raíz del repositorio). No hace falta tener Python, Node ni Git instalados, solo internet la primera vez:
+Si falla la instalación o la carga, el iniciador muestra el error. La API informa `ready: false` y el análisis devuelve HTTP 503 cuando el modelo no está disponible. La interfaz deshabilita el botón de análisis en ese estado.
 
-1. La primera vez descarga [uv](https://github.com/astral-sh/uv) y un Python 3.12 portable en `runtime/`, e instala el motor clásico (~1 minuto).
-2. Ofrece instalar el motor IA para CPU o GPU NVIDIA (varios GB). Si ya está instalado, lo usa directamente. La API selecciona CPU cuando PyTorch no dispone de CUDA. Si la instalación falla, la app abre igual con el motor clásico.
-3. Inicia un solo servidor con la app y la API, abre el navegador y muestra en la consola el link y un QR para celulares conectados al mismo wifi.
-
-Para usar e instalar la app desde celulares fuera de la red local, doble clic en **`COMPARTIR.cmd`**: además abre un link HTTPS público temporal con [Cloudflare Tunnel](https://github.com/cloudflare/cloudflared) (se descarga a `runtime/` la primera vez; el link cambia en cada inicio). La PC debe quedar encendida mientras se use.
-
-Cada link incluye una clave de acceso (`?clave=...`) guardada en `runtime/clave.txt`; sin ella la API responde 401. Para invalidar los links ya compartidos: `INICIAR.cmd --nueva-clave`. Otras opciones: `--instalar-ia`, `--puerto N`, `--sin-navegador`. Python portable vive en `runtime/`; el entorno neuronal, los repositorios auxiliares y los pesos viven en `procesamiento/.venv-neural`, `vendor` y `modelos`. Estas carpetas están ignoradas por Git.
-
-## IA en una laptop sin GPU dedicada
-
-1. Descargar y extraer el repositorio actualizado en una carpeta local de Windows x64.
-2. Tener conexión a internet para la primera instalación. No hace falta instalar Python, Git ni CUDA.
-3. Hacer doble clic en **`INICIAR_IA_CPU.cmd`**. La primera vez prepara PyTorch CPU, los modelos y el servidor; las siguientes reutiliza la instalación.
-4. Esperar a que aparezca **motor IA (CPU)** y se abra la aplicación. Subir una foto y esperar el resultado. Si aparece motor clásico, revisar el error de la consola o `neural_error` en `/api/health`.
-
-El mismo modelo se ejecuta en el procesador, con lotes de una máscara para reducir el consumo de memoria. No se vuelve a entrenar. El procesamiento puede tardar varios minutos según el procesador, la memoria y la cantidad de colonias; el rendimiento en las laptops de la universidad debe medirse. Preparar la instalación con internet antes de la presentación. Copiar un entorno virtual de otra PC no reemplaza la instalación.
-
-Verificación local: 30 pruebas automatizadas aprobadas y una imagen AGAR (`13895.jpg`, 2048 × 2048) procesada con `device=cpu`, lote 1: 12,046 s de carga y 31,279 s de análisis. Se reutilizaron pesos y dependencias existentes (PyTorch 2.11.0+cu128 ejecutando en CPU); se comprobó la resolución de los paquetes CPU con `pip --dry-run`. Falta medir el rendimiento en la laptop de destino.
-
-Instalación desde cero verificada en Windows Sandbox (sin Git, Python, runtime de Visual C++ ni GPU, con `LongPathsEnabled=0` y una carpeta de 97 caracteres): motor clásico listo en 22 s; motor IA en CPU instalado en 71 s reutilizando los tres pesos grandes (los demás archivos sí se descargaron) y una foto de 1185 × 1026 analizada en 20,6 s con 14,6 s de carga y 3,1 GB de RAM como máximo, en una máquina virtual de 12 núcleos lógicos y 8 GB. Una laptop de gama baja tardará más.
-
-Opciones desde PowerShell, en la raíz del proyecto:
+Opciones desde PowerShell:
 
 ```powershell
-.\INICIAR_IA_CPU.cmd
-.\INICIAR.cmd --instalar-ia --device cpu  # instalar o reparar
-.\INICIAR.cmd --device auto              # CUDA disponible o CPU
+.\INICIAR.cmd --instalar-ia --device cpu
+.\INICIAR.cmd --device auto
+.\INICIAR.cmd --puerto 8001 --sin-navegador
 ```
 
-Para iniciar directamente con uvicorn, definir `$env:IA_DEVICE="cpu"` antes del comando. `IA_DEVICE=auto` es el valor predeterminado de la API. El motor clásico sigue disponible si la IA no carga.
+`--instalar-ia` reinstala o repara las dependencias. Se conservan los pesos ya descargados y se verifican sus hashes. La carpeta `procesamiento/referencias` debe estar presente. Si falta, volver a extraerla del ZIP completo.
 
-## Instalación manual
+El Python portable está en `runtime/`; el entorno neuronal, las dependencias auxiliares y los pesos están en `procesamiento/.venv-neural`, `vendor` y `modelos`. Estas carpetas no se suben a Git. Instalar en cada PC: copiar un entorno virtual entre equipos no sustituye la instalación.
 
-Entorno probado: **Windows, Python 3.12, NVIDIA RTX 5060 de 8 GB**, PyTorch con CUDA 12.8. Instalar Python 3.12 antes de empezar (Git solo si se clona en lugar de descargar el ZIP). El motor clásico no necesita GPU.
+## Acceso desde celulares
+
+El iniciador muestra un enlace y un QR para la misma red wifi. `COMPARTIR.cmd` abre un enlace HTTPS temporal mediante Cloudflare Tunnel para acceder por internet. La PC debe permanecer encendida. Cada enlace incluye una clave de acceso guardada en `runtime/clave.txt`. `INICIAR.cmd --nueva-clave` invalida las anteriores.
+
+## Flujo de análisis
+
+1. Capturar o seleccionar una fotografía.
+2. Delimitar la placa mediante OpenCV.
+3. Detectar candidatos con Grounding DINO y segmentarlos con SAM2.
+4. Filtrar duplicados, regiones demasiado pequeñas y regiones fuera de la placa.
+5. Mostrar el conteo y revisar las marcas manualmente.
+
+Las correcciones se guardan separadas de la predicción automática. El sistema no identifica especies. Las fotos se procesan en la PC que ejecuta el servidor.
+
+## Instalación manual y API
+
+Con Python 3.12 disponible, desde `procesamiento`:
 
 ```powershell
-git clone https://github.com/renzo022010/Las-Chicas-del-Semaforo-Baldex-Mengurino.git
-cd Las-Chicas-del-Semaforo-Baldex-Mengurino\procesamiento
+py -3.12 instalar.py --device cpu
+.\.venv-neural\Scripts\python.exe contador_hibrido.py 'C:\ruta\foto.jpg' --device cpu --batch-size 1
 ```
 
-Instalar el motor clásico:
+Para CUDA usar `--device cuda`. Para iniciar directamente la API:
 
 ```powershell
-py -3.12 instalar.py --motor clasico
-```
-
-Instalar el híbrido y descargar los pesos oficiales:
-
-```powershell
-py -3.12 instalar.py --motor hibrido --device auto
-# Para forzar la instalación sin CUDA:
-py -3.12 instalar.py --motor hibrido --device cpu
-```
-
-La instalación híbrida descarga varios GB. Crea `.venv-neural`, clona versiones fijadas de los repositorios de los modelos, descarga sus pesos y verifica los hashes registrados. Usa la implementación PyTorch de atención deformable para evitar compilar extensiones CUDA en Windows. SAM2 se instala sin su extensión opcional de limpieza de máscaras. No modifica el entorno clásico `.venv`.
-
-## Procesar una fotografía
-
-Dentro de `procesamiento`:
-
-```powershell
-.\.venv\Scripts\python.exe contador.py 'C:\ruta\foto.jpg'
-.\.venv-neural\Scripts\python.exe contador_hibrido.py 'C:\ruta\foto.jpg'
-```
-
-También se puede arrastrar una foto sobre `PROCESAR_FOTO.cmd` o `PROCESAR_HIBRIDO.cmd`. El doble clic sin foto intenta abrir un ejemplo AGAR que no se distribuye en este repositorio; utilizar una foto propia o agregar el dataset.
-
-Salidas: imagen anotada, JSON con conteo y detecciones, máscara de placa, mapa de instancias y regiones coloreadas. El híbrido guarda sus archivos en `procesamiento/resultados/hibrido_individual`.
-
-Para corregir el límite automático, usar `--roi X Y RADIO` en píxeles de la imagen original. El parámetro `--box-threshold 0.25` controla la admisión de candidatos neuronales. Los scores no son probabilidades calibradas y todos los conteos requieren revisión.
-
-## API local
-
-Ejecutar `procesamiento/INICIAR_API.cmd` o, dentro de esa carpeta:
-
-```powershell
+$env:IA_DEVICE="auto"
 .\.venv-neural\Scripts\python.exe -m uvicorn api:app --host 127.0.0.1 --port 8000
 ```
 
-Abrir [la documentación interactiva](http://127.0.0.1:8000/docs) después del mensaje `Application startup complete`.
+`procesamiento/INICIAR_API.cmd` utiliza el iniciador común sin abrir el navegador. En ese caso se aplican los enlaces con clave y acceso por red del iniciador.
 
-Endpoints validados (los que usa la PWA):
+Endpoints:
 
-- `GET /health`: estado del motor.
-- `POST /analyze?engine=hybrid`: subir una fotografía en el campo multipart `file`.
-- `POST /analyze?engine=classic`: comparar con el procesamiento clásico.
-- `GET /results/{analysis_id}/foto_conteo.jpg`: consultar la imagen anotada (`foto_original.jpg` es la foto sin marcas).
-- `POST /results/{analysis_id}/review`: guardar centros corregidos manualmente sin sobrescribir el resultado automático.
+- `GET /health`: disponibilidad de IA, dispositivo y motivo de error si lo hubiera.
+- `POST /analyze`: foto multipart en el campo `file`; `engine=auto` y `engine=hybrid` seleccionan la IA.
+- `GET /results/{analysis_id}/foto_conteo.jpg`: imagen anotada.
+- `GET /results/{analysis_id}/foto_resultado.json`: resultado automático.
+- `POST /results/{analysis_id}/review`: correcciones manuales.
 
-En desarrollo, sin validar y no usados por la PWA todavía:
+La PWA utiliza el prefijo `/api`. Si se configura clave, se envía como `X-Clave` o con el enlace completo generado. `/docs` permite explorar la API.
 
-- `GET/POST /samples`, `GET/PUT/DELETE /samples/{id}`: registro de muestras (trazabilidad y diluciones) en `resultados/muestras.db`.
-- `POST /ufc`: calcular UFC/mL o UFC/g a partir de diluciones, volumen sembrado y conteos de placa.
+Los endpoints `/samples` y `/ufc` están en desarrollo y aún no los usa la PWA. La API mantiene el modelo en memoria y serializa los análisis.
 
-`POST /analyze` usa `engine=auto` por defecto: híbrido si el modelo cargó, clásico si no. Si `.venv-neural` no existe o el modelo falla al cargar, la API arranca igual con el motor clásico (`GET /health` indica el motivo en `neural_error`). La interfaz PWA está en [`pwa/`](pwa/README.md).
+## Resultados preliminares
 
-Organización del código (`procesamiento/app/`):
+En 38 fotos AGAR conocidas: error absoluto medio de **1,97 colonias/foto**. En la placa 5271 se detectaron **42** frente a una referencia de **43**, con 42 coincidencias, ninguna detección adicional y una omisión según el emparejamiento centro/caja.
 
-```text
-api.py                 punto de entrada (uvicorn api:app)
-lanzador.py            usado por INICIAR.cmd: dependencias, servidor, navegador, QR y túnel
-app/main.py            create_app(): crea los servicios y registra los controladores
-app/config.py          rutas, límites y CLAVE_ACCESO
-app/web.py             PWA compilada en el mismo puerto, prefijo /api y clave de acceso
-app/controllers/       una ruta HTTP por archivo: health, analysis, results, samples
-app/services/          lógica sin HTTP: engines (motores y GPU), images, results, samples, ufc
-app/schemas/           validación Pydantic de entradas
-web/                   PWA compilada (npm run build en pwa/); se versiona para no requerir Node
-```
+Tiempo medio registrado: **1,51 s/foto** con RTX 5060 y modelo cargado; carga inicial de esa ejecución: 13,25 s. En una prueba posterior con CPU, la foto 13895 (2048 × 2048) tomó 31,279 s de análisis y 12,046 s de carga. No representan tiempos garantizados en otras computadoras.
 
-Si existe `web/`, `INICIAR_API.cmd` también sirve la app en http://127.0.0.1:8000 (solo esta PC, sin clave).
+**No es una validación independiente:** los pesos se ajustaron con AGAR y puede existir solapamiento con entrenamiento. Se necesitan fotos propias nuevas y conteos manuales revisados para medir generalización. El emparejamiento centro/caja no equivale a mAP ni evalúa la exactitud de las máscaras.
 
-Los controladores solo traducen peticiones y errores; los motores de conteo (`contador.py`, `contador_hibrido.py`) no cambian.
+[Resumen](procesamiento/resultados/RESUMEN_HIBRIDO.md) · [Métricas](procesamiento/resultados/hibrido_v0_3/metricas.csv) · [Registro de evaluación](procesamiento/resultados/hibrido_v0_3/resumen.json).
 
-Ejemplo de revisión, con coordenadas de la foto original:
+Para reproducir la evaluación, colocar las fotos y anotaciones en `Dataset/AGAR_representative`. `procesamiento/split.json` registra nombres y hashes. Desde `procesamiento`, ejecutar `evaluar_hibrido.py` con el entorno neuronal y después `generar_informe_hibrido.py`. Las anotaciones se leen después de inferir y no entran al detector.
 
-```json
-{"centers":[{"x":120,"y":230},{"x":360,"y":420}],"note":"Revisado manualmente"}
-```
-
-La API conserva los modelos en memoria y serializa el procesamiento para compartir la GPU. Las fotos se procesan localmente; no se envían a un servicio externo. Este servidor está preparado para una demo local, no como despliegue público.
-
-## Resultados de la demo
-
-Comparación en 38 fotos AGAR conocidas:
-
-| Medida | Clásico v0.2 | Híbrido v0.3 |
-|---|---:|---:|
-| Error absoluto medio (colonias/foto) | 9,45 | 1,97 |
-| Conteo en placa 5271 (referencia 43) | 41 | 42 |
-
-Mejoraron 31 fotos, empeoraron 2 y 5 conservaron el mismo error. En 5271, el híbrido obtuvo 42 coincidencias, ninguna detección adicional y una omisión según el emparejamiento centro/caja. Tiempo medio híbrido: 1,51 s por foto con el modelo cargado, excluyendo lectura y exportación; carga inicial de esa ejecución: 13,25 s.
-
-**No es una validación independiente:** los pesos publicados se ajustaron con AGAR, por lo que puede existir solapamiento con entrenamiento. Se necesitan fotografías propias nuevas y revisión de sus anotaciones para medir generalización. La correspondencia centro/caja no equivale a mAP ni mide exactitud de las máscaras.
-
-[Resumen](procesamiento/resultados/RESUMEN_HIBRIDO.md) · [Métricas por foto](procesamiento/resultados/hibrido_v0_3/metricas.csv) · [Configuración y resumen](procesamiento/resultados/hibrido_v0_3/resumen.json).
-
-## Dataset y reproducción
-
-Las fotos y anotaciones AGAR **no están incluidas**. Para reproducir la comparación exacta, disponer de la misma muestra y colocarla en:
-
-```text
-Dataset/AGAR_representative/
-  higher-resolution/bright/
-  higher-resolution/dark/
-  higher-resolution/vague/
-  lower-resolution/
-```
-
-Cada foto necesita su JSON correspondiente. `procesamiento/split.json` registra los nombres y hashes de la muestra utilizada. La partición conserva nombres históricos `development`/`evaluation`, pero ambos grupos ya son conocidos. La referencia `colonies_number` se lee después de inferir y nunca entra en el detector.
-
-Dentro de `procesamiento`, tras instalar ambos motores:
-
-```powershell
-.\.venv\Scripts\python.exe evaluar.py --split development --tag v0_2_final
-.\.venv\Scripts\python.exe evaluar.py --split evaluation --tag v0_2_final
-.\.venv-neural\Scripts\python.exe evaluar_hibrido.py
-.\.venv\Scripts\python.exe generar_informe_hibrido.py
-```
-
-El informe HTML se genera localmente con las imágenes anotadas. Los resúmenes y CSV de la ejecución original están versionados; las fotos, las máscaras, las subidas a la API, los pesos y los entornos Python están excluidos de Git.
-
-## Pruebas
+## Pruebas y estructura
 
 ```powershell
 cd procesamiento
-.\.venv-neural\Scripts\python.exe -m unittest test_hibrido test_procesamiento test_muestras test_servidor -v
+.\.venv-neural\Scripts\python.exe -m unittest discover -p "test_*.py"
 ```
 
-Se verificaron 24 pruebas funcionales y una subida HTTP real con el modelo neuronal. Las pruebas sintéticas y de contrato API no sustituyen la evaluación biológica. La PWA tiene sus propias pruebas: `npm test` dentro de `pwa/`.
+En `pwa`, ejecutar `npm test` y `npm run build` al cambiar la interfaz. La compilación en `procesamiento/web` se incluye en Git para no requerir Node en la laptop de destino.
 
-## Modelos, fuentes y atribución
+- `contador_hibrido.py`: detección, segmentación y filtrado.
+- `imagen.py`: lectura de fotos y geometría de la placa.
+- `app/`: controladores, servicios y validación de la API.
+- `lanzador.py` e `instalar.py`: instalación e inicio en CPU o CUDA.
+- `metricas.py`: evaluación contra anotaciones.
 
-- [ColonyGroundedSAM2 — código oficial](https://github.com/WFSRDataScience/ColonyGroundedSAM2) y [pesos](https://huggingface.co/DataScienceWFSR/ColonyGroundedSAM2).
+## Presentación
+
+[PowerPoint del equipo](docs/MVP_Conteo_Colonias_Equipo7.pptx), con el flujo y los resultados de IA.
+
+## Fuentes
+
+- [ColonyGroundedSAM2](https://github.com/WFSRDataScience/ColonyGroundedSAM2) y [pesos publicados](https://huggingface.co/DataScienceWFSR/ColonyGroundedSAM2).
 - [Grounding DINO](https://github.com/IDEA-Research/GroundingDINO).
 - [SAM2](https://github.com/facebookresearch/sam2).
 - [BERT base uncased](https://huggingface.co/google-bert/bert-base-uncased).
-- Korporaal et al., *Colony Grounded SAM2: Zero-shot detection and segmentation of bacterial colonies using foundation models*, 2026. [Artículo](https://arxiv.org/html/2603.13393v1).
 
-Los hashes de los pesos y commits de los repositorios se guardan en `procesamiento/referencias`. Los repositorios de terceros se descargan con sus licencias; no se redistribuyen aquí sus pesos ni su código. Consultar las condiciones originales antes de redistribuir modelos o datasets.
+Los hashes y commits de referencia están en `procesamiento/referencias`. Los modelos y repositorios auxiliares mantienen las condiciones y licencias de sus autores.

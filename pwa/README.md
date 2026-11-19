@@ -7,7 +7,7 @@ Para **usar** la app no hace falta Node: `INICIAR.cmd` (raíz del repositorio) s
 ## Requisitos para desarrollar
 
 - Node 22 y npm.
-- La API corriendo: `procesamiento\INICIAR_API.cmd`. Usa el motor IA si `.venv-neural` existe; si no, arranca con el clásico.
+- La API corriendo: `procesamiento\INICIAR_API.cmd`. Instala y carga el motor IA. Si no está disponible, el análisis queda deshabilitado.
 
 ## Desarrollo
 
@@ -36,7 +36,7 @@ npm test
 ## Pantallas
 
 1. **Inicio:** escudo UNALM, estado del motor y últimos análisis de este dispositivo (guardados en el navegador; la API no tiene listado).
-2. **Registro fotográfico:** capturar o elegir de galería, vista previa y motor (IA o clásico).
+2. **Registro fotográfico:** capturar o elegir de galería, vista previa y análisis con IA.
 3. **Resultado del análisis:** conteo, colonias cerca del borde, corrección tocando la imagen (quitar o añadir) y **Guardar revisión**. La revisión se guarda aparte en `revision.json`; la predicción original no cambia.
 
 Trazabilidad, diluciones, UFC y reporte PDF quedan para una siguiente versión. La API ya expone `/samples` y `/ufc` como endpoints en desarrollo, y las pantallas que los usaban están en el commit `14a6ace` de la rama `mvp-pwa`.

@@ -8,7 +8,7 @@ from dataclasses import dataclass,asdict
 import cv2
 import numpy as np
 from PIL import Image
-from contador import locate_plate,read_image,save_image
+from imagen import locate_plate,read_image,save_image
 ROOT=Path(__file__).resolve().parent
 
 @dataclass(frozen=True)

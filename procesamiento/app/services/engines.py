@@ -1,6 +1,6 @@
-"""Motores de conteo. El hibrido es opcional: si no carga, la API sigue con el clasico."""
+"""Servicio de conteo con IA y estado de disponibilidad del modelo."""
 import asyncio,os
-from contador import count_colonies,write_result,save_image
+from imagen import save_image
 from contador_hibrido import HybridCounter,NeuralConfig,write_hybrid_result
 
 def default_hybrid_factory():
@@ -16,7 +16,7 @@ class EngineUnavailable(Exception):pass
 class EngineService:
     def __init__(self,hybrid_factory=default_hybrid_factory,use_hybrid=True):
         self.hybrid_factory=hybrid_factory;self.use_hybrid=use_hybrid
-        self.model=None;self.error=None if use_hybrid else 'Desactivado con MOTOR=clasico'
+        self.model=None;self.error=None if use_hybrid else 'Carga del modelo desactivada'
         self.lock=None
 
     async def start(self):
@@ -26,28 +26,27 @@ class EngineService:
         try:self.model=await asyncio.to_thread(self.hybrid_factory)
         except Exception as exc:  # missing .venv-neural, weights or CUDA
             self.error=f'{type(exc).__name__}: {exc}'
-            print('Motor hibrido no disponible, se usa el clasico. '+self.error,flush=True)
+            print('Motor IA no disponible. '+self.error,flush=True)
 
     def stop(self):self.model=None
 
     @property
-    def engines(self):return ['hybrid','classic'] if self.model else ['classic']
+    def engines(self):return ['hybrid'] if self.model else []
 
     @property
     def device(self):return getattr(self.model,'hardware',None)
 
     def resolve(self,engine):
-        if engine not in ('auto','hybrid','classic'):raise ValueError('Motor: auto, hybrid o classic')
-        if engine=='auto':return self.engines[0]
-        if engine=='hybrid' and not self.model:raise EngineUnavailable('Motor hibrido no disponible; usar classic')
-        return engine
+        if engine not in ('auto','hybrid'):raise ValueError('Motor: auto o hybrid')
+        if not self.model:raise EngineUnavailable('El modelo IA no esta disponible. Revisa la instalacion y reinicia el servidor.')
+        return 'hybrid'
 
     async def analyze(self,bgr,engine,folder):
         """Cuenta, exporta los archivos del motor y guarda la foto original para la revision manual."""
         async with self.lock:
-            fn=self.model.count if engine=='hybrid' else count_colonies
+            fn=self.model.count
             result,debug=await asyncio.to_thread(fn,bgr)
-            writer=write_hybrid_result if engine=='hybrid' else write_result
+            writer=write_hybrid_result
             await asyncio.to_thread(writer,result,debug,folder,'foto')
             await asyncio.to_thread(save_image,folder/'foto_original.jpg',bgr)
         return result

@@ -19,13 +19,13 @@ class DeviceTests(unittest.TestCase):
         self.assertEqual(self.config_for('cpu',True).device,'cpu')
     def test_invalid_device(self):
         with self.assertRaises(ValueError):self.config_for('invalid',False)
-    def test_failure_keeps_classic(self):
+    def test_failure_leaves_no_engine(self):
         def fail():raise RuntimeError('no weights')
         service=EngineService(fail)
         asyncio.run(service.start())
-        self.assertEqual(service.engines,['classic'])
+        self.assertEqual(service.engines,[])
         self.assertIn('no weights',service.error)
-    def test_classic_does_not_load_torch(self):
+    def test_disabled_loader_does_not_load_torch(self):
         with patch('app.services.engines.default_hybrid_factory') as factory:
             service=EngineService(factory,use_hybrid=False)
             asyncio.run(service.start())

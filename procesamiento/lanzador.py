@@ -26,12 +26,12 @@ def download(url,dest):
     when_unlocked(lambda:tmp.replace(dest))
 
 def ensure_server_deps():
-    """Instala el motor clasico y el servidor en el Python portable; se repite solo si cambia requirements.txt."""
+    """Instala las dependencias del servidor en el Python portable; se repite solo si cambia requirements.txt."""
     req=PROC/'requirements.txt'
     stamp=RT/'dependencias.sha256'
     want=hashlib.sha256(req.read_bytes()+' '.join(EXTRA).encode()).hexdigest()
     if stamp.is_file() and stamp.read_text()==want:return
-    say('Instalando el motor clasico y el servidor (solo la primera vez, ~1 minuto)...')
+    say('Instalando las dependencias del servidor (solo la primera vez, ~1 minuto)...')
     uv=os.environ.get('UV_EXE') or shutil.which('uv')
     cmd=[uv,'pip','install','--python',sys.executable] if uv else [sys.executable,'-m','pip','install']
     subprocess.run([*cmd,'-r',str(req),*EXTRA],check=True)
@@ -56,31 +56,12 @@ def neural_python():
     return py if py.is_file() and (PROC/'modelos/manifest.json').is_file() else None
 
 def maybe_install_neural(force,device="auto"):
-    """Ofrece el motor IA para CPU o GPU; la respuesta 'no' se recuerda. Si falla, la app abre con el clasico."""
+    """Instala el modelo necesario para analizar fotografias."""
     if neural_python() and not force:return
-    prefs_file=RT/'preferencias.json'
-    prefs=json.loads(prefs_file.read_text(encoding='utf-8')) if prefs_file.is_file() else {}
-    def remember_no():
-        prefs['instalar_ia']='no';prefs_file.write_text(json.dumps(prefs),encoding='utf-8')
-    if not force:
-        if prefs.get('instalar_ia')=='no':return
-        if has_nvidia_gpu():
-            say('\nSe detecto una GPU NVIDIA. El motor IA es mucho mas preciso que el clasico y tarda segundos por foto.')
-        else:
-            say('\nEsta PC no tiene GPU NVIDIA. El motor clasico (liviano) ya esta listo y responde en segundos.')
-            say('Opcional: el motor IA es mas preciso, pero en el procesador cada foto puede tardar de 30 s a varios minutos.')
-        say('El motor IA descarga varios GB. Se puede instalar despues con: INICIAR.cmd --instalar-ia')
-        try:answer=input('Instalar el motor IA ahora? [s/N]: ').strip().lower()
-        except EOFError:answer=''
-        if answer not in ('s','si','sí','y','yes'):
-            remember_no()
-            return
-    say('Instalando el motor IA...')
+    say('Instalando el motor IA (varios GB; requiere internet la primera vez)...')
     try:subprocess.run([sys.executable,str(PROC/'instalar.py'),'--motor','hibrido','--device',device],cwd=PROC,check=True)
-    except subprocess.CalledProcessError:
-        say('\nNo se pudo instalar el motor IA (ver el mensaje anterior). La app se abre con el motor clasico.')
-        say('Para reintentar: INICIAR.cmd --instalar-ia')
-        remember_no()
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit('No se pudo instalar la IA. Revisa el error anterior y reintenta con INICIAR.cmd --instalar-ia') from exc
 
 def access_key(renew):
     path=RT/'clave.txt'
@@ -171,14 +152,14 @@ def main():
         raise SystemExit('Falta la PWA compilada en procesamiento/web. Ejecuta "npm run build" dentro de pwa/.')
 
     neural=neural_python()
-    python=neural or Path(sys.executable)
+    if not neural:raise SystemExit('Instalacion IA incompleta. Ejecuta INICIAR.cmd --instalar-ia')
+    python=neural
     key=access_key(args.nueva_clave)
     port=free_port(args.puerto)
     if port!=args.puerto:say(f'El puerto {args.puerto} esta ocupado; se usa el {port}.')
 
     env=dict(os.environ,CLAVE_ACCESO=key,PYTHONUTF8='1')
     env['IA_DEVICE']=args.device
-    if not neural:env['MOTOR']='clasico'
     if neural and args.device=='cpu':say('IA en CPU: el analisis puede tardar varios minutos; espera a que termine.')
     say('\nIniciando el servidor'+(' y cargando el modelo IA (puede tardar varios minutos)...' if neural else '...'))
     server=start_server(python,port,env)
@@ -186,20 +167,15 @@ def main():
     try:
         try:health=wait_ready(port,key,server,timeout=900)
         except ServerFailed as exc:
-            if not neural:raise SystemExit(str(exc)) from None
-            # A broken neural environment must not block the app: the classic engine has its own Python.
-            say(f'{exc}\nEl motor IA no pudo iniciar; se abre con el motor clasico.')
-            stop(server)
-            env['MOTOR']='clasico'
-            server=start_server(sys.executable,port,env)
-            try:health=wait_ready(port,key,server)
-            except ServerFailed as again:raise SystemExit(str(again)) from None
+            raise SystemExit(str(exc)) from None
+        if not health.get('ready'):
+            raise SystemExit('El modelo IA no pudo cargar: '+str(health.get('neural_error')))
         local=f'http://localhost:{port}/?clave={key}'
         ip=lan_ip();lan=f'http://{ip}:{port}/?clave={key}' if ip else None
         public=None
         if args.modo=='compartir':tunnel,public=start_tunnel(port);public=f'{public}/?clave={key}'
 
-        engine=f"IA ({health.get('device')})" if 'hybrid' in health['engines'] else 'clasico (OpenCV)'
+        engine=f"IA ({health.get('device')})"
         say('\n'+'='*64)
         say(f'  Conteo de UFC listo · motor {engine}')
         say('='*64)

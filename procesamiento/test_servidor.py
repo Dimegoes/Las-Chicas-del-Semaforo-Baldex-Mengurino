@@ -21,8 +21,8 @@ class ServerTests(unittest.TestCase):
             self.assertIn('PWA',c.get('/').text)
             self.assertIn('PWA',c.get('/resultado/abc').text)  # React resolves client routes
             self.assertEqual(c.get('/assets/app.js').text,'console.log(1)')
-            self.assertEqual(c.get('/api/health').json()['engines'],['classic'])
-            self.assertEqual(c.get('/health').json()['engines'],['classic'])
+            self.assertEqual(c.get('/api/health').json()['engines'],[])
+            self.assertEqual(c.get('/health').json()['engines'],[])
             self.assertEqual(c.get('/api/results/'+'a'*32+'/foto_conteo.jpg').status_code,404)
 
     def test_access_key_protects_api_but_not_pwa_files(self):

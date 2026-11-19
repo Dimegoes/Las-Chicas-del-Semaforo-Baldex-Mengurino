@@ -12,7 +12,7 @@ export function EngineStatus() {
   const hybrid = h.engines?.includes('hybrid')
   return (
     <span className={'pill ' + (hybrid ? 'pill-good' : 'pill-warn')} title={h.neural_error || ''}>
-      {hybrid ? `Motor IA · ${h.device}` : 'Motor clásico (OpenCV)'}
+      {hybrid ? `Motor IA · ${h.device}` : 'IA no disponible'}
     </span>
   )
 }
@@ -49,7 +49,7 @@ export default function Home() {
                   <span className="recent-count">{r.reviewed ?? r.count}</span>
                   <span className="recent-main">
                     <strong>{r.reviewed != null ? 'colonias (revisado)' : 'colonias detectadas'}</strong>
-                    <span className="muted small">{fmtDateTime(r.at)} · {r.engine === 'hybrid' ? 'IA' : 'Clásico'}</span>
+                    <span className="muted small">{fmtDateTime(r.at)} · IA</span>
                   </span>
                   <Icon name="chevron" />
                 </Link>

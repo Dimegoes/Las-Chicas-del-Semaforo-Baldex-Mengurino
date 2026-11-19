@@ -154,25 +154,23 @@ class LauncherTests(unittest.TestCase):
         py=lanzador.venv_python(self.proc/'.venv-neural');py.parent.mkdir(parents=True);py.touch()
         (self.proc/'modelos').mkdir();(self.proc/'modelos/manifest.json').touch()
 
-    def test_failed_install_keeps_app_running_and_stops_asking(self):
-        failure=subprocess.CalledProcessError(2,'instalar')
-        with patch.object(lanzador,'has_nvidia_gpu',return_value=False),patch('builtins.input',return_value='s'),\
-             patch('subprocess.run',side_effect=failure) as run:
-            lanzador.maybe_install_neural(False)
-        self.assertEqual(run.call_count,1)
-        self.assertEqual(self.prefs(),{'instalar_ia':'no'})
+    def test_failed_install_stops_startup(self):
+        with patch('subprocess.run',side_effect=subprocess.CalledProcessError(2,'instalar')):
+            with self.assertRaises(SystemExit):lanzador.maybe_install_neural(False)
 
-    def test_forced_install_failure_does_not_raise(self):
+    def test_forced_install_failure_stops_startup(self):
         with patch('subprocess.run',side_effect=subprocess.CalledProcessError(1,'instalar')):
-            lanzador.maybe_install_neural(True,'cpu')
+            with self.assertRaises(SystemExit):lanzador.maybe_install_neural(True,'cpu')
 
-    def test_answer_no_is_remembered_without_installing(self):
-        with patch.object(lanzador,'has_nvidia_gpu',return_value=False),patch('builtins.input',return_value=''),\
-             patch('subprocess.run') as run:
-            lanzador.maybe_install_neural(False)
-            lanzador.maybe_install_neural(False)
+    def test_existing_install_is_reused(self):
+        self.neural_env()
+        with patch('subprocess.run') as run:lanzador.maybe_install_neural(False)
         run.assert_not_called()
-        self.assertEqual(self.prefs(),{'instalar_ia':'no'})
+
+    def test_old_declined_preference_does_not_skip_required_install(self):
+        (self.rt/'preferencias.json').write_text('{"instalar_ia":"no"}')
+        with patch('subprocess.run') as run:lanzador.maybe_install_neural(False,'cpu')
+        self.assertIn('cpu',run.call_args.args[0])
 
     def test_downloads_trust_bundled_certificates(self):
         import certifi,os,ssl

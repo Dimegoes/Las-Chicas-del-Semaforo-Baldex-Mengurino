@@ -3,7 +3,7 @@ const KEY = 'ufc-recientes'
 const MAX = 8
 
 export function loadRecent() {
-  try { return JSON.parse(localStorage.getItem(KEY)) || [] } catch { return [] }
+  try { return (JSON.parse(localStorage.getItem(KEY)) || []).filter((r) => r.engine === 'hybrid') } catch { return [] }
 }
 
 export function saveRecent(entry) {

@@ -1,4 +1,4 @@
-"""Instala el motor clásico o híbrido en un entorno local separado (Python 3.12). No necesita Git."""
+"""Instala el motor IA en un entorno local separado (Python 3.12). No necesita Git."""
 from pathlib import Path
 import argparse,hashlib,json,os,shutil,subprocess,sys,tempfile,time,urllib.request,zipfile
 ROOT=Path(__file__).resolve().parent
@@ -74,39 +74,37 @@ def place_cpp_runtime(env):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--motor',choices=['clasico','hibrido'],default='clasico')
+    parser.add_argument('--motor',choices=['hibrido'],default='hibrido')
     parser.add_argument('--device',choices=['auto','cpu','cuda'],default='auto')
     args=parser.parse_args()
     if sys.version_info[:2]!=(3,12):
         parser.error('Usar Python 3.12, versión con la que se verificaron las dependencias fijadas.')
-    neural=args.motor=='hibrido'
     device=args.device
     if device=='auto':
         exe=shutil.which('nvidia-smi')
         device='cuda' if exe and subprocess.run([exe,'-L'],capture_output=True).returncode==0 else 'cpu'
-    env=ROOT/('.venv-neural' if neural else '.venv')
+    env=ROOT/'.venv-neural'
     python=env/('Scripts/python.exe' if os.name=='nt' else 'bin/python')
     if not python.exists():run(sys.executable,'-m','venv',env)
-    requirements=ROOT/('requirements-neural.txt' if neural else 'requirements.txt')
-    if neural and device=='cpu':requirements=ROOT/'requirements-neural-cpu.txt'
+    requirements=ROOT/'requirements-neural.txt'
+    if device=='cpu':requirements=ROOT/'requirements-neural-cpu.txt'
     ready=env/'instalacion-completa.json'
     ready.unlink(missing_ok=True)
     (env/IN_PROGRESS).touch()
     install_requirements(python,requirements)
-    if neural:
-        place_cpp_runtime(env)
-        commits=json.loads((ROOT/'referencias/repositorios.json').read_text(encoding='utf-8'))
-        for name,slug in REPOS.items():fetch_repo(name,slug,commits[name])
-        run(python,ROOT/'preparar_compatibilidad_neural.py')
-        setup_env=os.environ.copy();setup_env['SAM2_BUILD_CUDA']='0'
-        run(python,'-m','pip','install','--no-build-isolation','-e',ROOT/'vendor/sam2',env=setup_env)
-        run(python,ROOT/'descargar_modelos.py')
-        for record in json.loads((ROOT/'referencias/modelos.json').read_text(encoding='utf-8')):
-            with (ROOT/'modelos'/record['file']).open('rb') as handle:
-                digest=hashlib.file_digest(handle,'sha256').hexdigest()
-            if digest!=record['sha256']:raise RuntimeError('Hash inesperado: '+record['file'])
+    place_cpp_runtime(env)
+    commits=json.loads((ROOT/'referencias/repositorios.json').read_text(encoding='utf-8'))
+    for name,slug in REPOS.items():fetch_repo(name,slug,commits[name])
+    run(python,ROOT/'preparar_compatibilidad_neural.py')
+    setup_env=os.environ.copy();setup_env['SAM2_BUILD_CUDA']='0'
+    run(python,'-m','pip','install','--no-build-isolation','-e',ROOT/'vendor/sam2',env=setup_env)
+    run(python,ROOT/'descargar_modelos.py')
+    for record in json.loads((ROOT/'referencias/modelos.json').read_text(encoding='utf-8')):
+        with (ROOT/'modelos'/record['file']).open('rb') as handle:
+            digest=hashlib.file_digest(handle,'sha256').hexdigest()
+        if digest!=record['sha256']:raise RuntimeError('Hash inesperado: '+record['file'])
     run(python,'-m','pip','check')
-    ready.write_text(json.dumps({'device':device if neural else None}),encoding='utf-8')
+    ready.write_text(json.dumps({'device':device}),encoding='utf-8')
     (env/IN_PROGRESS).unlink()
     print('Instalación completada. Consultar README.md para procesar una foto o iniciar la API.')
 if __name__=='__main__':main()

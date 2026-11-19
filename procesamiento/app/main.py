@@ -2,7 +2,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
-from app.config import OUTPUT,SAMPLES_DB,hybrid_requested
+from app.config import OUTPUT,SAMPLES_DB
 from app.controllers import analysis,health,results,samples
 from app.services.engines import EngineService,default_hybrid_factory
 from app.services.results import ResultStore
@@ -14,7 +14,7 @@ TAGS=[{'name':'Estado'},{'name':'Analisis'},{'name':'Resultados'},
 
 def create_app(output=OUTPUT,samples_db=SAMPLES_DB,hybrid_factory=default_hybrid_factory,use_hybrid=None,web_dir=None,access_key=None):
     """web_dir sirve la PWA compilada en el mismo puerto; access_key exige una clave en cada ruta de la API."""
-    engines=EngineService(hybrid_factory,hybrid_requested() if use_hybrid is None else use_hybrid)
+    engines=EngineService(hybrid_factory,True if use_hybrid is None else use_hybrid)
 
     @asynccontextmanager
     async def lifespan(app):

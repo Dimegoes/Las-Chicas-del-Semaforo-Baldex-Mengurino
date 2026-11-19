@@ -64,20 +64,21 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(client.post('/samples',json={**body,'responsible':''}).status_code,422)
             self.assertEqual(client.post('/ufc',json={'dilutions':[dil(1,30,40)]}).json()['value'],3500)
 
-    def test_classic_fallback_when_neural_engine_fails(self):
+    def test_unavailable_model_rejects_analysis(self):
         def broken():raise RuntimeError('sin pesos')
         with self.client(hybrid_factory=broken,use_hybrid=True) as client:
             health=client.get('/health').json()
-            self.assertEqual(health['engines'],['classic']);self.assertIn('sin pesos',health['neural_error'])
+            self.assertEqual(health['engines'],[]);self.assertIn('sin pesos',health['neural_error'])
             self.assertEqual(client.post('/analyze?engine=hybrid',files={'file':('p.png',png(),'image/png')}).status_code,503)
             self.assertEqual(client.post('/analyze?engine=gpu',files={'file':('p.png',png(),'image/png')}).status_code,400)
             r=client.post('/analyze',files={'file':('p.png',png(),'image/png')})
-            self.assertEqual(r.status_code,200,r.text);self.assertEqual(r.json()['engine'],'classic')
-            self.assertEqual(client.get(r.json()['original_url']).status_code,200)
+            self.assertEqual(r.status_code,503,r.text)
+            self.assertFalse(health['ready'])
+            self.assertIsNone(health['default_engine'])
 
-    def test_motor_clasico_skips_neural_load(self):
+    def test_disabled_model_loader(self):
         def never():raise AssertionError('no debe cargarse')
         with self.client(hybrid_factory=never,use_hybrid=False) as client:
-            self.assertEqual(client.get('/health').json()['neural_error'],'Desactivado con MOTOR=clasico')
+            self.assertEqual(client.get('/health').json()['neural_error'],'Carga del modelo desactivada')
 
 if __name__=='__main__':unittest.main(verbosity=2)

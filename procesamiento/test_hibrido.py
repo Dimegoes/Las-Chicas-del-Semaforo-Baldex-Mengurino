@@ -29,13 +29,18 @@ class HybridTests(unittest.TestCase):
     def test_upload_validation_and_manual_review(self):
         class FakeCounter:
             hardware='test-double'
+            def count(self,bgr):
+                h,w=bgr.shape[:2]
+                result={'count':0,'image_size':{'width':w,'height':h},'detections':[]}
+                debug={'annotated':bgr,'roi':np.zeros((h,w),np.uint8),'mask':np.zeros((h,w),np.uint8),'instances':np.zeros((h,w),np.uint16),'segments':bgr}
+                return result,debug
         with tempfile.TemporaryDirectory() as tmp:
             app=create_app(output=Path(tmp),samples_db=Path(tmp)/'m.db',hybrid_factory=FakeCounter,use_hybrid=True)
             with TestClient(app) as client:
                 self.assertTrue(client.get('/health').json()['ready'])
                 self.assertEqual(client.post('/analyze',files={'file':('x.jpg',b'invalid','image/jpeg')}).status_code,400)
                 raw=io.BytesIO();Image.new('RGB',(128,128),(180,180,180)).save(raw,format='PNG')
-                response=client.post('/analyze?engine=classic',files={'file':('photo.png',raw.getvalue(),'image/png')})
+                response=client.post('/analyze?engine=hybrid',files={'file':('photo.png',raw.getvalue(),'image/png')})
                 self.assertEqual(response.status_code,200,response.text)
                 record=response.json();ident=record['analysis_id']
                 self.assertEqual(record['count'],0)

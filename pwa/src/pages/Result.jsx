@@ -40,7 +40,7 @@ export default function Result() {
   if (!result) return <p className="muted">Cargando resultado…</p>
 
   const stats = reviewStats(points, result.count)
-  const engine = result.method?.includes('sam2') ? 'IA (híbrido)' : 'Clásico (OpenCV)'
+  const engine = result.method?.includes('sam2') ? 'IA' : 'Resultado anterior'
   return (
     <div className="stack">
       <h2 className="page-title">Resultado del análisis</h2>
